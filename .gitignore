@@ -1,0 +1,15 @@
+# Python önbellekleri
+__pycache__/
+*.pyc
+
+# Sanal ortam (Eğer kurduysan)
+.venv/
+venv/
+ENV/
+
+# Hassas konfigürasyon ve ayar dosyaları
+config.json
+
+# Editör ayarları
+.vscode/
+.idea/
