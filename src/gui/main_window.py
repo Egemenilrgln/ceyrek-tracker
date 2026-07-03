@@ -8,7 +8,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Çeyrek Altın")
-        self.setFixedSize(300, 150)
+        self.setFixedSize(300, 170)
         
         # --- DURUM DEĞİŞKENLERİ ---
         self.last_alis = 0.0
@@ -69,6 +69,16 @@ class MainWindow(QMainWindow):
         # Düzen birleştirme
         self.main_layout.addWidget(self.title_label)
         self.main_layout.addLayout(self.price_layout)
+        
+        # --- YENİ: GÜNLÜK DEĞİŞİM ETİKETİ ---
+        self.degisim_label = QLabel("Günlük Değişim: %0.00 ▬")
+        self.degisim_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.degisim_label.setStyleSheet("font-size: 11px; font-weight: bold; color: #6e6e73; padding-top: 5px;")
+        self.main_layout.addWidget(self.degisim_label)
+        # ------------------------------------
+        
+        self.main_layout.addStretch()
+        self.main_layout.addWidget(self.status_label)
         self.main_layout.addStretch()
         self.main_layout.addWidget(self.status_label)
         
@@ -126,6 +136,20 @@ class MainWindow(QMainWindow):
         # Fiyatları arayüze yazdır
         self.alis_label.setText(f"{current_alis:,.2f}")
         self.satis_label.setText(f"{current_satis:,.2f}")
+        
+        # --- YENİ: GÜNLÜK DEĞİŞİM RENK VE OK MANTIĞI ---
+        degisim = data.get('degisim', 0.0)
+        
+        if degisim > 0:
+            self.degisim_label.setText(f"Günlük Değişim: +%{degisim:.2f} ▲")
+            self.degisim_label.setStyleSheet("font-size: 11px; font-weight: bold; color: #4caf50; padding-top: 5px;")
+        elif degisim < 0:
+            self.degisim_label.setText(f"Günlük Değişim: %{degisim:.2f} ▼")
+            self.degisim_label.setStyleSheet("font-size: 11px; font-weight: bold; color: #f44336; padding-top: 5px;")
+        else:
+            self.degisim_label.setText(f"Günlük Değişim: %0.00 ▬")
+            self.degisim_label.setStyleSheet("font-size: 11px; font-weight: bold; color: #6e6e73; padding-top: 5px;")
+        # -----------------------------------------------
         
         # Gelecek döngü için mevcut fiyatı hafızaya al
         self.last_alis = current_alis

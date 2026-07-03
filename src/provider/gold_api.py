@@ -3,8 +3,6 @@ import requests
 def get_gold_data():
     """
     Truncgil Finans API'si kullanılarak canlı veri çekilir.
-    API'nin anahtar isimlendirmelerindeki (Türkçe karakter, tire vb.) 
-    değişikliklere karşı esnek arama mantığı içerir.
     """
     url = "https://finans.truncgil.com/today.json"
     
@@ -14,7 +12,6 @@ def get_gold_data():
         
         data = response.json()
         
-        # Gelen JSON içinde çeyrek altını dinamik olarak bul
         ceyrek_data = None
         for key, value in data.items():
             anahtar = key.lower()
@@ -23,20 +20,29 @@ def get_gold_data():
                 break
                 
         if ceyrek_data:
-            # Truncgil bazen "Alış" bazen "buying" kullanabilir, ikisine de hazır olalım
             alis_ham = ceyrek_data.get("Alış", ceyrek_data.get("buying", "0"))
             satis_ham = ceyrek_data.get("Satış", ceyrek_data.get("selling", "0"))
+            
+            # YENİ: Değişim verisini çekiyoruz
+            degisim_ham = ceyrek_data.get("Değişim", ceyrek_data.get("degisim", "0"))
             
             alis_str = str(alis_ham).replace(".", "").replace(",", ".")
             satis_str = str(satis_ham).replace(".", "").replace(",", ".")
             
+            # YENİ: Değişim verisindeki % işaretini temizleyip float yapıyoruz
+            degisim_str = str(degisim_ham).replace("%", "").replace(",", ".").strip()
+            try:
+                degisim_float = float(degisim_str)
+            except ValueError:
+                degisim_float = 0.0
+
             return {
                 "status": "success",
                 "alis": float(alis_str),
-                "satis": float(satis_str)
+                "satis": float(satis_str),
+                "degisim": degisim_float # YENİ EKLENDİ
             }
             
-        # Eğer yine de bulamazsa, JSON içindeki mevcut anahtarları terminale yazdırarak görelim
         mevcut_anahtarlar = list(data.keys())[:15]
         return {"status": "error", "message": f"Çeyrek anahtarı bulunamadı. Gelenler: {mevcut_anahtarlar}"}
         
