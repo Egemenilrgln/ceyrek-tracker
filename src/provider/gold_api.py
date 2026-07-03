@@ -2,78 +2,43 @@ import requests
 
 def get_gold_data():
     """
-    Bigpara üzerinden canlı çeyrek altın verilerini çeker.
-    Mimarideki 'Veri Sağlayıcı (Data Provider)' katmanıdır.
+    Truncgil Finans API'si kullanılarak canlı veri çekilir.
+    API'nin anahtar isimlendirmelerindeki (Türkçe karakter, tire vb.) 
+    değişikliklere karşı esnek arama mantığı içerir.
     """
-    # Bigpara'nın canlı borsa/altın verilerini dağıttığı güncel widget/api adresi
-    url = "https://bigpara.hurriyet.com.tr/api/v1/market/data" 
-    
-    # Gerçek bir tarayıcı gibi davranmak için gerekli başlıklar
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Referer": "https://bigpara.hurriyet.com.tr/altin/ceyrek-altin-fiyati/"
-    }
+    url = "https://finans.truncgil.com/today.json"
     
     try:
-        # 5 saniyelik zaman aşımı ile isteği gönderiyoruz
-        response = requests.get(url, headers=headers, timeout=5)
+        response = requests.get(url, timeout=5)
         response.raise_for_status()
         
         data = response.json()
         
-        # Bigpara API yanıt yapısı içinden çeyrek altını (Genelde SGLDC veya 'ceyrek-altin' koduyla tutulur) arıyoruz.
-        # Eğer doğrudan widget API'si farklı bir şemada dönerse yedek olarak HTML kazıma (BeautifulSoup) devreye girmelidir.
-        
-        # Alternatif ve en garanti Scraping yöntemi (HTML parse):
-        if not data or "data" not in data:
-            return _fetch_via_scraping()
-            
-        # API verisi başarılı geldiyse süzme işlemi:
-        for item in data.get("data", []):
-            if item.get("code") == "SGLDC" or "ceyrek" in item.get("name", "").lower():
-                return {
-                    "status": "success",
-                    "alis": float(item.get("bid", 0)),
-                    "satis": float(item.get("ask", 0)),
-                    "degisim": float(item.get("percentage_change", 0))
-                }
+        # Gelen JSON içinde çeyrek altını dinamik olarak bul
+        ceyrek_data = None
+        for key, value in data.items():
+            anahtar = key.lower()
+            if "çeyrek" in anahtar or "ceyrek" in anahtar:
+                ceyrek_data = value
+                break
                 
-        # API'de bulunamazsa doğrudan sayfayı kazımaya yönlendir
-        return _fetch_via_scraping()
-
-    except Exception as e:
-        # Herhangi bir ağ hatasında yedek mekanizmayı dene
-        return _fetch_via_scraping()
-
-def _fetch_via_scraping():
-    """
-    API hata verirse veya yapısı değişirse yedek olarak çalışan HTML Kazıma mekanizması.
-    """
-    from bs4 import BeautifulSoup
-    
-    url = "https://bigpara.hurriyet.com.tr/altin/ceyrek-altin-fiyati/"
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-    
-    try:
-        response = requests.get(url, headers=headers, timeout=5)
-        soup = BeautifulSoup(response.content, "html.parser")
-        
-        # Bigpara sayfasındaki fiyat hücrelerinin sınıfları (Kendi kaynak kodundan süzülmüştür)
-        # Sitedeki <span class="value Node-Alis"> veya benzeri yapıları hedefler.
-        alis_element = soup.find("span", {"class": "textAlis"}) or soup.find(class_="Node-Alis")
-        satis_element = soup.find("span", {"class": "textSatis"}) or soup.find(class_="Node-Satis")
-        
-        if alis_element and satis_element:
-            # "10.075,00" -> 10075.00 dönüşümü
-            alis = float(alis_element.text.strip().replace(".", "").replace(",", "."))
-            satis = float(satis_element.text.strip().replace(".", "").replace(",", "."))
+        if ceyrek_data:
+            # Truncgil bazen "Alış" bazen "buying" kullanabilir, ikisine de hazır olalım
+            alis_ham = ceyrek_data.get("Alış", ceyrek_data.get("buying", "0"))
+            satis_ham = ceyrek_data.get("Satış", ceyrek_data.get("selling", "0"))
+            
+            alis_str = str(alis_ham).replace(".", "").replace(",", ".")
+            satis_str = str(satis_ham).replace(".", "").replace(",", ".")
+            
             return {
                 "status": "success",
-                "alis": alis,
-                "satis": satis,
-                "degisim": 0.0
+                "alis": float(alis_str),
+                "satis": float(satis_str)
             }
-    except Exception as scraping_error:
-        print(f"Yedek kazıma sistemi de başarısız oldu: {scraping_error}")
+            
+        # Eğer yine de bulamazsa, JSON içindeki mevcut anahtarları terminale yazdırarak görelim
+        mevcut_anahtarlar = list(data.keys())[:15]
+        return {"status": "error", "message": f"Çeyrek anahtarı bulunamadı. Gelenler: {mevcut_anahtarlar}"}
         
-    return {"status": "error", "message": "Veri çekilemedi."}
+    except Exception as e:
+        return {"status": "error", "message": f"Bağlantı hatası: {str(e)}"}
