@@ -10,6 +10,12 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Çeyrek Altın")
         self.setFixedSize(300, 150)
         
+        # --- DURUM DEĞİŞKENLERİ ---
+        self.last_alis = 0.0
+        self.last_satis = 0.0
+        
+        # ... (Geri kalan kodların aynı kalacak) ...
+        
         # Modern Koyu & Krem Monokrom Stil (CSS)
         self.setStyleSheet("""
             QMainWindow {
@@ -96,8 +102,34 @@ class MainWindow(QMainWindow):
         self.worker.start()
 
     def update_ui(self, data):
-        self.alis_label.setText(f"{data.get('alis', 0):,.2f}")
-        self.satis_label.setText(f"{data.get('satis', 0):,.2f}")
+        current_alis = data.get('alis', 0)
+        current_satis = data.get('satis', 0)
+        
+        # ALIŞ fiyatı kontrolü ve renk değişimi
+        if self.last_alis != 0.0:
+            if current_alis > self.last_alis:
+                self.alis_label.setStyleSheet("font-size: 20px; color: #4caf50; font-weight: 500;") # Artış - Yeşil
+            elif current_alis < self.last_alis:
+                self.alis_label.setStyleSheet("font-size: 20px; color: #f44336; font-weight: 500;") # Düşüş - Kırmızı
+            else:
+                self.alis_label.setStyleSheet("font-size: 20px; color: #f5f5f7; font-weight: 500;") # Nötr - Beyaz/Krem
+                
+        # SATIŞ fiyatı kontrolü ve renk değişimi
+        if self.last_satis != 0.0:
+            if current_satis > self.last_satis:
+                self.satis_label.setStyleSheet("font-size: 20px; color: #4caf50; font-weight: bold;") # Artış - Yeşil
+            elif current_satis < self.last_satis:
+                self.satis_label.setStyleSheet("font-size: 20px; color: #f44336; font-weight: bold;") # Düşüş - Kırmızı
+            else:
+                self.satis_label.setStyleSheet("font-size: 20px; color: #e2b13c; font-weight: bold;") # Nötr - Altın Rengi
+                
+        # Fiyatları arayüze yazdır
+        self.alis_label.setText(f"{current_alis:,.2f}")
+        self.satis_label.setText(f"{current_satis:,.2f}")
+        
+        # Gelecek döngü için mevcut fiyatı hafızaya al
+        self.last_alis = current_alis
+        self.last_satis = current_satis
         
         from datetime import datetime
         self.status_label.setText(f"Canlı • Son Güncelleme: {datetime.now().strftime('%H:%M:%S')}")
