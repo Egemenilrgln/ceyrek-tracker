@@ -3,21 +3,20 @@ from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QGridLayout, QH
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QIcon, QAction
 from src.gui.worker import GoldWorker
+from PySide6.QtWidgets import QPushButton
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        
-        # Windows Görev Çubuğunda (Taskbar) Özel İkon Gösterme Ayarı
+
+        # Taskbar ikonu
         import sys
         import os
         if sys.platform == "win32":
             import ctypes
-            # Uygulamaya benzersiz bir kimlik (AppID) veriyoruz
             myappid = 'egemen.ceyrektakip.widget.1.0' 
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
             
-        # Pencerenin kendisine de ana ikonu set ediyoruz
         from PySide6.QtGui import QIcon
         current_dir = os.path.dirname(os.path.abspath(__file__))
         root_dir = os.path.dirname(os.path.dirname(current_dir))
@@ -39,7 +38,7 @@ class MainWindow(QMainWindow):
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         
-        # PREMIUM GRADAYAN VE KOYU GECE MAVİSİ
+        # PREMIUM GRADYAN VE KOYU GECE MAVİSİ
         self.central_widget.setStyleSheet("""
             QWidget {
                 background: qlineargradient(
@@ -102,8 +101,8 @@ class MainWindow(QMainWindow):
                 border-radius: 4px;
             }
         """)
-        
-        # Senin mevcut layout yapın (Dış çerçevenin içine gömüldü)
+
+        # Canlı Panel
         self.live_panel_layout = QHBoxLayout(self.live_badge)
         self.live_panel_layout.setSpacing(5)
         self.live_panel_layout.setContentsMargins(5, 2, 6, 2)
@@ -120,7 +119,7 @@ class MainWindow(QMainWindow):
         self.top_bar_layout.addWidget(self.live_badge)
         self.top_bar_layout.addStretch()
         
-        # Pencere Küçültme Butonu (Minimize)
+        # Pencere Küçültme
         self.minimize_button = QPushButton("—")
         self.minimize_button.setObjectName("minimize_btn")
         self.minimize_button.setProperty("class", "nav_btn")
@@ -129,7 +128,7 @@ class MainWindow(QMainWindow):
         self.minimize_button.clicked.connect(self.showMinimized)
         self.top_bar_layout.addWidget(self.minimize_button)
         
-        # Kapatma Butonu (Close)
+        # Kapatma
         self.close_button = QPushButton("✕")
         self.close_button.setObjectName("close_btn")
         self.close_button.setProperty("class", "nav_btn")
@@ -140,29 +139,30 @@ class MainWindow(QMainWindow):
         
         self.main_layout.addLayout(self.top_bar_layout)
         
-        # 2. İki Sütunlu Milimetrik Grid Düzeni (Alış / Satış)
+        # İki sütun (Alış/Satış)
         self.price_grid = QGridLayout()
         self.price_grid.setSpacing(10)
         
-        # Alış Sütunu Ögeleri
+        # Alış Sütunu
         self.alis_title = QLabel("ALIŞ")
-        self.alis_title.setStyleSheet("font-size: 10px; color: #6e6e73; font-weight: bold; padding-top: 15px;")
+        self.alis_title.setStyleSheet("font-size: 10px; color: #6e6e73; font-weight: bold; padding-top: 15px; letter-spacing: 1px;")
         self.alis_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         self.alis_label = QLabel("0.00")
-        self.alis_label.setStyleSheet("font-size: 20px; color: #f5f5f7; font-weight: 500; padding-bottom: 10px;")
+        # Satış etiketindeki stil yapısının birebir aynısını uyguluyoruz
+        self.alis_label.setStyleSheet("font-size: 20px; color: #f5f5f7; font-weight: bold; padding-bottom: 10px;")
         self.alis_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        # Satış Sütunu Ögeleri
+        # Satış Sütunu
         self.satis_title = QLabel("SATIŞ")
-        self.satis_title.setStyleSheet("font-size: 10px; color: #6e6e73; font-weight: bold; padding-top: 15px;")
+        self.satis_title.setStyleSheet("font-size: 10px; color: #6e6e73; font-weight: bold; padding-top: 15px; letter-spacing: 1px;")
         self.satis_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         self.satis_label = QLabel("0.00")
         self.satis_label.setStyleSheet("font-size: 20px; color: #dcdde1; font-weight: bold; padding-bottom: 10px;")
         self.satis_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        # Ögeleri Izgaraya Kilitleme
+        # Izgaraya Kilitleme
         self.price_grid.addWidget(self.alis_title, 0, 0)
         self.price_grid.addWidget(self.satis_title, 0, 1)
         self.price_grid.addWidget(self.alis_label, 1, 0)
@@ -170,22 +170,20 @@ class MainWindow(QMainWindow):
         
         self.main_layout.addLayout(self.price_grid)
         
-        # 3. Günlük Değişim Etiketi
+        # Günlük Değişim Etiketi
         self.degisim_label = QLabel("Günlük Değişim: %0.00 ▬")
         self.degisim_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.degisim_label.setStyleSheet("font-size: 11px; font-weight: bold; color: #6e6e73; padding-top: 2px;")
         self.main_layout.addWidget(self.degisim_label)
         
-        # 4. Alt Durum Çubuğu
+        # Alt Durum Çubuğu
         self.status_label = QLabel("Güncelleniyor...")
         self.status_label.setStyleSheet("font-size: 10px; color: #6e6e73; padding-top: 4px;")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.main_layout.addWidget(self.status_label)
         
-        # SYSTEM TRAY (SİSTEM TEPSİSİ) KURULUMU
+        # SİSTEM TEPSİSİ KURULUMU
         self.tray_icon = QSystemTrayIcon(self)
-        
-        # icon.ico dosyasının yerini proje dizinine göre dinamik hesaplıyoruz
         import os
         from PySide6.QtGui import QIcon
         
@@ -193,7 +191,6 @@ class MainWindow(QMainWindow):
         root_dir = os.path.dirname(os.path.dirname(current_dir)) # Ana proje klasörü
         icon_path = os.path.join(root_dir, "assets", "icon.ico") # assets/icon.ico yolu
         
-        # Yeni ikonumuzu sisteme yükliyoruz
         self.tray_icon.setIcon(QIcon(icon_path)) 
         
         tray_menu = QMenu()
@@ -209,16 +206,16 @@ class MainWindow(QMainWindow):
         show_action.triggered.connect(self.showNormal)
         self.always_on_top_action.triggered.connect(self.toggle_always_on_top)
         quit_action.triggered.connect(self.force_quit)
+
         
-        # Menü sıralaması
+        # Sistem Tepsisi Menü sıralaması
         tray_menu.addAction(show_action)
         tray_menu.addAction(self.always_on_top_action)
         tray_menu.addSeparator()
         tray_menu.addAction(quit_action)
         
         self.tray_icon.setContextMenu(tray_menu)
-        self.tray_icon.show()
-        
+        self.tray_icon.show()        
         self.tray_icon.activated.connect(self.tray_icon_activated)
 
         self.worker = GoldWorker(interval_seconds=10)
@@ -227,7 +224,7 @@ class MainWindow(QMainWindow):
         self.worker.start()
     
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
+        if event.button() == Qt.LeftButton:
             self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             event.accept()
 
@@ -254,10 +251,8 @@ class MainWindow(QMainWindow):
         mevcut odağına göre onu ekrana getirir veya aşağıya (tepsiye) gizler.
         """
         if reason in (QSystemTrayIcon.ActivationReason.Trigger, QSystemTrayIcon.ActivationReason.DoubleClick):
-            # Eğer pencere görünürse ve şu an en önde aktif durumdaysa gizle
             if self.isVisible() and self.isActiveWindow():
                 self.hide()
-            # Eğer pencere gizliyse veya arkada kaldıysa ekrana getir
             else:
                 self.showNormal()
                 self.activateWindow()
@@ -273,13 +268,13 @@ class MainWindow(QMainWindow):
         
         if self.last_alis != 0.0:
             if current_alis > self.last_alis:
-                self.alis_label.setStyleSheet("font-size: 20px; color: #4caf50; font-weight: 500; padding-bottom: 10px;")
+                self.alis_label.setStyleSheet("font-size: 20px; color: #4caf50; font-weight: bold; padding-bottom: 10px;")
             elif current_alis < self.last_alis:
-                self.alis_label.setStyleSheet("font-size: 20px; color: #f44336; font-weight: 500; padding-bottom: 10px;")
+                self.alis_label.setStyleSheet("font-size: 20px; color: #f44336; font-weight: bold; padding-bottom: 10px;")
             else:
-                self.alis_label.setStyleSheet("font-size: 20px; color: #f5f5f7; font-weight: 500; padding-bottom: 10px;")
+                self.alis_label.setStyleSheet("font-size: 20px; color: #f5f5f7; font-weight: bold; padding-bottom: 10px;")
         else:
-            self.alis_label.setStyleSheet("font-size: 20px; color: #f5f5f7; font-weight: 500; padding-bottom: 10px;")
+            self.alis_label.setStyleSheet("font-size: 20px; color: #f5f5f7; font-weight: bold; padding-bottom: 10px;")
                 
         if self.last_satis != 0.0:
             if current_satis > self.last_satis:

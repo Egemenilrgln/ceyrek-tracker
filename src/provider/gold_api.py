@@ -9,10 +9,9 @@ def get_gold_data():
     try:
         response = requests.get(url, timeout=5)
         response.raise_for_status()
-        
         data = response.json()
-        
         ceyrek_data = None
+
         for key, value in data.items():
             anahtar = key.lower()
             if "çeyrek" in anahtar or "ceyrek" in anahtar:
@@ -23,7 +22,7 @@ def get_gold_data():
             alis_ham = ceyrek_data.get("Alış", ceyrek_data.get("buying", "0"))
             satis_ham = ceyrek_data.get("Satış", ceyrek_data.get("selling", "0"))
             
-            # YENİ: Değişim verisini çekiyoruz
+            # Değişim verisini çekiyoruz
             degisim_ham = ceyrek_data.get("Değişim", ceyrek_data.get("degisim", "0"))
             
             alis_str = str(alis_ham).replace(".", "").replace(",", ".")
