@@ -52,16 +52,13 @@ class MainWindow(QMainWindow):
                 padding: 0px;
             }
             QPushButton#minimize_btn {
-                font-size: 15px;
-                padding-bottom: 3px; /* Çizgiyi yukarı çekip kareyle hizalar */
+                font-size: 14px;
+                padding-bottom: 2px; 
             }
             
             /* Buton Hover Renkleri */
             QPushButton#minimize_btn:hover {
                 color: #00d2d3; /* Küçültme için yumuşak mavi/turkuaz */
-            }
-            QPushButton#maximize_btn:hover {
-                color: #ff9f43; /* Tam ekran için soft turuncu (Şimdilik işlevsiz) */
             }
             QPushButton#close_btn:hover {
                 color: #ff4d4d; /* Kapatma için kırmızı */
@@ -73,12 +70,42 @@ class MainWindow(QMainWindow):
         self.main_layout.setContentsMargins(15, 12, 15, 12)
         self.main_layout.setSpacing(6)
         
-        # --- ÜST BAR VE ÜÇLÜ BUTON DÜZENİ ---
+        # --- ÜST BAR VE DÜZENİ ---
         self.top_bar_layout = QHBoxLayout()
         self.top_bar_layout.setContentsMargins(0, 0, 0, 0)
-        self.top_bar_layout.setSpacing(6) # Butonların kendi arasındaki boşluk
+        self.top_bar_layout.setSpacing(6)
         
-        # Başlığı tam ortalamak için sol tarafa görünmez bir esneklik veriyoruz
+        # 1. YENİ: SOL ÜST KÖŞE CANLI PANELİ (Kapsayıcı Tek Bir Dış Widget)
+        self.live_badge = QWidget()
+        self.live_badge.setObjectName("live_badge") # Stili sadece bu dış kutuya kilitlemek için ID verdik
+        
+        # Sadece dış çerçeveye stil uygula, içindeki etiketlere border bulaşmasını engelle
+        self.live_badge.setStyleSheet("""
+            QWidget#live_badge {
+                background-color: rgba(255, 59, 48, 0.06); /* %6 hafif kırmızı dolgu */
+                border: 1px solid rgba(255, 59, 48, 0.35);  /* %35 şık kırmızı dış çerçeve */
+                border-radius: 4px;
+            }
+        """)
+        
+        # Senin mevcut layout yapın (Dış çerçevenin içine gömüldü)
+        self.live_panel_layout = QHBoxLayout(self.live_badge)
+        self.live_panel_layout.setSpacing(5)
+        self.live_panel_layout.setContentsMargins(5, 2, 6, 2)
+        
+        self.live_dot = QLabel("●")
+        self.live_dot.setStyleSheet("font-size: 10px; color: #ff3b30; font-weight: bold; background: transparent; border: none;")
+        
+        self.live_text = QLabel("CANLI")
+        self.live_text.setStyleSheet("font-size: 9px; font-weight: bold; color: #ff3b30; letter-spacing: 1px; background: transparent; border: none;")
+        
+        self.live_panel_layout.addWidget(self.live_dot)
+        self.live_panel_layout.addWidget(self.live_text)
+        
+        # Bütün halindeki bu dış kapsülü ana üst bara ekliyoruz
+        self.top_bar_layout.addWidget(self.live_badge)
+        
+        # Sol üst panel ile sağ üst butonlar arasını doldurarak iki uca yaslar
         self.top_bar_layout.addStretch()
         
         # Pencere Küçültme Butonu (Minimize)
@@ -87,7 +114,7 @@ class MainWindow(QMainWindow):
         self.minimize_button.setProperty("class", "nav_btn")
         self.minimize_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.minimize_button.setFixedSize(16, 16)
-        self.minimize_button.clicked.connect(self.showMinimized) # Pencereyi aşağıya indirir
+        self.minimize_button.clicked.connect(self.showMinimized)
         self.top_bar_layout.addWidget(self.minimize_button)
         
         # Kapatma Butonu (Close)
@@ -107,20 +134,20 @@ class MainWindow(QMainWindow):
         
         # Alış Sütunu Ögeleri
         self.alis_title = QLabel("ALIŞ")
-        self.alis_title.setStyleSheet("font-size: 10px; color: #6e6e73; font-weight: bold;")
+        self.alis_title.setStyleSheet("font-size: 10px; color: #6e6e73; font-weight: bold; padding-top: 15px;")
         self.alis_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         self.alis_label = QLabel("0.00")
-        self.alis_label.setStyleSheet("font-size: 20px; color: #f5f5f7; font-weight: 500;")
+        self.alis_label.setStyleSheet("font-size: 20px; color: #f5f5f7; font-weight: 500; padding-bottom: 10px;")
         self.alis_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # Satış Sütunu Ögeleri
         self.satis_title = QLabel("SATIŞ")
-        self.satis_title.setStyleSheet("font-size: 10px; color: #6e6e73; font-weight: bold;")
+        self.satis_title.setStyleSheet("font-size: 10px; color: #6e6e73; font-weight: bold; padding-top: 15px;")
         self.satis_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         self.satis_label = QLabel("0.00")
-        self.satis_label.setStyleSheet("font-size: 20px; color: #dcdde1; font-weight: bold;")
+        self.satis_label.setStyleSheet("font-size: 20px; color: #dcdde1; font-weight: bold; padding-bottom: 10px;")
         self.satis_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # Ögeleri Izgaraya Kilitleme
@@ -169,7 +196,6 @@ class MainWindow(QMainWindow):
         self.worker.error_occurred.connect(self.handle_error)
         self.worker.start()
 
-    # --- PENCEREYİ SÜRÜKLEME MANTIĞI ---
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
@@ -181,24 +207,33 @@ class MainWindow(QMainWindow):
             event.accept()
 
     def update_ui(self, data):
+        if self.live_dot.styleSheet() == "font-size: 10px; color: #ff3b30; font-weight: bold; background: transparent; border: none;":
+            self.live_dot.setStyleSheet("font-size: 10px; color: #9e231b; font-weight: bold; background: transparent; border: none;")
+        else:
+            self.live_dot.setStyleSheet("font-size: 10px; color: #ff3b30; font-weight: bold; background: transparent; border: none;")
+
         current_alis = data.get('alis', 0)
         current_satis = data.get('satis', 0)
         
         if self.last_alis != 0.0:
             if current_alis > self.last_alis:
-                self.alis_label.setStyleSheet("font-size: 20px; color: #4caf50; font-weight: 500;")
+                self.alis_label.setStyleSheet("font-size: 20px; color: #4caf50; font-weight: 500; padding-bottom: 10px;")
             elif current_alis < self.last_alis:
-                self.alis_label.setStyleSheet("font-size: 20px; color: #f44336; font-weight: 500;")
+                self.alis_label.setStyleSheet("font-size: 20px; color: #f44336; font-weight: 500; padding-bottom: 10px;")
             else:
-                self.alis_label.setStyleSheet("font-size: 20px; color: #f5f5f7; font-weight: 500;")
+                self.alis_label.setStyleSheet("font-size: 20px; color: #f5f5f7; font-weight: 500; padding-bottom: 10px;")
+        else:
+            self.alis_label.setStyleSheet("font-size: 20px; color: #f5f5f7; font-weight: 500; padding-bottom: 10px;")
                 
         if self.last_satis != 0.0:
             if current_satis > self.last_satis:
-                self.satis_label.setStyleSheet("font-size: 20px; color: #4caf50; font-weight: bold;")
+                self.satis_label.setStyleSheet("font-size: 20px; color: #4caf50; font-weight: bold; padding-bottom: 10px;")
             elif current_satis < self.last_satis:
-                self.satis_label.setStyleSheet("font-size: 20px; color: #f44336; font-weight: bold;")
+                self.satis_label.setStyleSheet("font-size: 20px; color: #f44336; font-weight: bold; padding-bottom: 10px;")
             else:
-                self.satis_label.setStyleSheet("font-size: 20px; color: #dcdde1; font-weight: bold;")
+                self.satis_label.setStyleSheet("font-size: 20px; color: #dcdde1; font-weight: bold; padding-bottom: 10px;")
+        else:
+            self.satis_label.setStyleSheet("font-size: 20px; color: #dcdde1; font-weight: bold; padding-bottom: 10px;")
                 
         self.alis_label.setText(f"{current_alis:,.2f}")
         self.satis_label.setText(f"{current_satis:,.2f}")
@@ -221,7 +256,7 @@ class MainWindow(QMainWindow):
         self.last_satis = current_satis
         
         from datetime import datetime
-        self.status_label.setText(f"Canlı • Son Güncelleme: {datetime.now().strftime('%H:%M:%S')}")
+        self.status_label.setText(f"Son Güncelleme: {datetime.now().strftime('%H:%M:%S')}")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def handle_error(self, error_msg):
