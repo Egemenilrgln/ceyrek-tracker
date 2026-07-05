@@ -7,6 +7,22 @@ from src.gui.worker import GoldWorker
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        
+        # Windows Görev Çubuğunda (Taskbar) Özel İkon Gösterme Ayarı
+        import sys
+        import os
+        if sys.platform == "win32":
+            import ctypes
+            # Uygulamaya benzersiz bir kimlik (AppID) veriyoruz
+            myappid = 'egemen.ceyrektakip.widget.1.0' 
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+            
+        # Pencerenin kendisine de ana ikonu set ediyoruz
+        from PySide6.QtGui import QIcon
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        root_dir = os.path.dirname(os.path.dirname(current_dir))
+        icon_path = os.path.join(root_dir, "assets", "icon.ico")
+        self.setWindowIcon(QIcon(icon_path))
         self.setWindowTitle("Çeyrek Altın")
         self.setFixedSize(300, 170)
         self.last_alis = 0.0
@@ -15,8 +31,7 @@ class MainWindow(QMainWindow):
         # Sürükleme (Pencereyi taşıma) için gerekli değişkenler
         self.drag_position = QPoint()
         
-        # Beyaz üst barı kaldırıyoruz
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowMinimizeButtonHint)
         # Köşelerin arkasında işletim sistemi çirkinliği kalmaması için şeffaflık izni
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
@@ -24,7 +39,7 @@ class MainWindow(QMainWindow):
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         
-        # --- PREMIUM GRADAYAN VE KOYU GECE MAVİSİ ---
+        # PREMIUM GRADAYAN VE KOYU GECE MAVİSİ
         self.central_widget.setStyleSheet("""
             QWidget {
                 background: qlineargradient(
@@ -83,7 +98,7 @@ class MainWindow(QMainWindow):
         self.live_badge.setStyleSheet("""
             QWidget#live_badge {
                 background-color: rgba(255, 59, 48, 0.06); /* %6 hafif kırmızı dolgu */
-                border: 1px solid rgba(255, 59, 48, 0.35);  /* %35 şık kırmızı dış çerçeve */
+                border: 1px solid rgba(255, 59, 48, 0.45);  /* %35 şık kırmızı dış çerçeve */
                 border-radius: 4px;
             }
         """)
@@ -102,10 +117,7 @@ class MainWindow(QMainWindow):
         self.live_panel_layout.addWidget(self.live_dot)
         self.live_panel_layout.addWidget(self.live_text)
         
-        # Bütün halindeki bu dış kapsülü ana üst bara ekliyoruz
         self.top_bar_layout.addWidget(self.live_badge)
-        
-        # Sol üst panel ile sağ üst butonlar arasını doldurarak iki uca yaslar
         self.top_bar_layout.addStretch()
         
         # Pencere Küçültme Butonu (Minimize)
@@ -170,18 +182,37 @@ class MainWindow(QMainWindow):
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.main_layout.addWidget(self.status_label)
         
-        # ---- SYSTEM TRAY (SİSTEM TEPSİSİ) KURULUMU ----
+        # SYSTEM TRAY (SİSTEM TEPSİSİ) KURULUMU
         self.tray_icon = QSystemTrayIcon(self)
-        self.tray_icon.setIcon(self.style().standardIcon(self.style().StandardPixmap.SP_ComputerIcon))
+        
+        # icon.ico dosyasının yerini proje dizinine göre dinamik hesaplıyoruz
+        import os
+        from PySide6.QtGui import QIcon
+        
+        current_dir = os.path.dirname(os.path.abspath(__file__)) # src/gui klasörü
+        root_dir = os.path.dirname(os.path.dirname(current_dir)) # Ana proje klasörü
+        icon_path = os.path.join(root_dir, "assets", "icon.ico") # assets/icon.ico yolu
+        
+        # Yeni ikonumuzu sisteme yükliyoruz
+        self.tray_icon.setIcon(QIcon(icon_path)) 
         
         tray_menu = QMenu()
         show_action = QAction("Göster", self)
+        
+        # Onay kutulu "Ekrana Sabitle" seçeneği
+        self.always_on_top_action = QAction("Ekrana Sabitle", self)
+        self.always_on_top_action.setCheckable(True)
+        
         quit_action = QAction("Çıkış", self)
         
+        # Sinyal bağlantıları
         show_action.triggered.connect(self.showNormal)
+        self.always_on_top_action.triggered.connect(self.toggle_always_on_top)
         quit_action.triggered.connect(self.force_quit)
         
+        # Menü sıralaması
         tray_menu.addAction(show_action)
+        tray_menu.addAction(self.always_on_top_action)
         tray_menu.addSeparator()
         tray_menu.addAction(quit_action)
         
@@ -190,12 +221,11 @@ class MainWindow(QMainWindow):
         
         self.tray_icon.activated.connect(self.tray_icon_activated)
 
-        # Worker
         self.worker = GoldWorker(interval_seconds=10)
         self.worker.data_received.connect(self.update_ui)
         self.worker.error_occurred.connect(self.handle_error)
         self.worker.start()
-
+    
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
@@ -205,6 +235,32 @@ class MainWindow(QMainWindow):
         if event.buttons() == Qt.MouseButton.LeftButton:
             self.move(event.globalPosition().toPoint() - self.drag_position)
             event.accept()
+
+    def toggle_always_on_top(self):
+        """Sağ alttaki menüden 'Ekrana Sabitle' tıklandığında pencereyi en üstte tutar."""
+        flags = self.windowFlags()
+        if self.always_on_top_action.isChecked():
+            self.setWindowFlags(flags | Qt.WindowType.WindowStaysOnTopHint)
+        else:
+            self.setWindowFlags(flags & ~Qt.WindowType.WindowStaysOnTopHint)
+        
+        # Bayrak değişiminden sonra pencerenin kaybolmaması için yeniden gösteriyoruz
+        self.show()
+        self.activateWindow()
+
+    def tray_icon_activated(self, reason):
+        """
+        Sistem tepsisi ikonuna tıklandığında (tek veya çift tıklama), pencerenin 
+        mevcut odağına göre onu ekrana getirir veya aşağıya (tepsiye) gizler.
+        """
+        if reason in (QSystemTrayIcon.ActivationReason.Trigger, QSystemTrayIcon.ActivationReason.DoubleClick):
+            # Eğer pencere görünürse ve şu an en önde aktif durumdaysa gizle
+            if self.isVisible() and self.isActiveWindow():
+                self.hide()
+            # Eğer pencere gizliyse veya arkada kaldıysa ekrana getir
+            else:
+                self.showNormal()
+                self.activateWindow()
 
     def update_ui(self, data):
         if self.live_dot.styleSheet() == "font-size: 10px; color: #ff3b30; font-weight: bold; background: transparent; border: none;":
@@ -263,10 +319,6 @@ class MainWindow(QMainWindow):
         print(f"[DEBUG] Alınan Hata: {error_msg}")
         self.status_label.setText("Veri güncellenirken sorun oluştu.")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-    def tray_icon_activated(self, reason):
-        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
-            self.showNormal()
 
     def closeEvent(self, event):
         if self.tray_icon.isVisible():
