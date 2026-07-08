@@ -24,6 +24,7 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon(icon_path))
         self.setWindowTitle("Çeyrek Altın")
         self.setFixedSize(300, 170)
+        
         self.last_alis = 0.0
         self.last_satis = 0.0
         
@@ -218,9 +219,15 @@ class MainWindow(QMainWindow):
         self.tray_icon.show()        
         self.tray_icon.activated.connect(self.tray_icon_activated)
 
-        self.worker = GoldWorker(interval_seconds=10)
+       # Süreyi 30 saniyeden 8 saate (28800 saniye) çıkararak kotayı aya yayıyoruz
+        self.worker = GoldWorker(interval_seconds=28800)
+        
+        # Gelen tüm yanıtları (başarılı fiyatı veya olası hatayı) tek kanaldan update_ui'a bağlıyoruz
         self.worker.data_received.connect(self.update_ui)
-        self.worker.error_occurred.connect(self.handle_error)
+        
+        # error_occurred sinyali yeni worker'da olmadığı için bu satırı siliyoruz veya kaldırıyoruz:
+        # self.worker.error_occurred.connect(self.handle_error) -> Bu satır artık gerekmiyor.
+        
         self.worker.start()
     
     def mousePressEvent(self, event):
@@ -241,7 +248,6 @@ class MainWindow(QMainWindow):
         else:
             self.setWindowFlags(flags & ~Qt.WindowType.WindowStaysOnTopHint)
         
-        # Bayrak değişiminden sonra pencerenin kaybolmaması için yeniden gösteriyoruz
         self.show()
         self.activateWindow()
 
@@ -258,14 +264,23 @@ class MainWindow(QMainWindow):
                 self.activateWindow()
 
     def update_ui(self, data):
+        # 1. KRİTİK ADIM: API veya Ağ hatası geldiyse arayüzü kilitlemeden hatayı yakala
+        if data.get("status") == "error":
+            # main_window.py içindeki mevcut handle_error metodunu tetikliyoruz
+            self.handle_error(data.get("message"))
+            return
+
+        # 2. CANLI NOKTA (LIVE DOT) EFEKTİ: Mevcut mantığın aynen korunuyor
         if self.live_dot.styleSheet() == "font-size: 10px; color: #ff3b30; font-weight: bold; background: transparent; border: none;":
             self.live_dot.setStyleSheet("font-size: 10px; color: #9e231b; font-weight: bold; background: transparent; border: none;")
         else:
             self.live_dot.setStyleSheet("font-size: 10px; color: #ff3b30; font-weight: bold; background: transparent; border: none;")
 
-        current_alis = data.get('alis', 0)
-        current_satis = data.get('satis', 0)
+        # Verileri sözlükten güvenli şekilde çekiyoruz
+        current_alis = data.get('alis', 0.0)
+        current_satis = data.get('satis', 0.0)
         
+        # 3. ALIŞ FİYATI RENK DEĞİŞİM KONTROLÜ
         if self.last_alis != 0.0:
             if current_alis > self.last_alis:
                 self.alis_label.setStyleSheet("font-size: 20px; color: #4caf50; font-weight: bold; padding-bottom: 10px;")
@@ -276,6 +291,7 @@ class MainWindow(QMainWindow):
         else:
             self.alis_label.setStyleSheet("font-size: 20px; color: #f5f5f7; font-weight: bold; padding-bottom: 10px;")
                 
+        # 4. SATIŞ FİYATI RENK DEĞİŞİM KONTROLÜ
         if self.last_satis != 0.0:
             if current_satis > self.last_satis:
                 self.satis_label.setStyleSheet("font-size: 20px; color: #4caf50; font-weight: bold; padding-bottom: 10px;")
@@ -286,11 +302,13 @@ class MainWindow(QMainWindow):
         else:
             self.satis_label.setStyleSheet("font-size: 20px; color: #dcdde1; font-weight: bold; padding-bottom: 10px;")
                 
+        # Yazıları güncelle ve ortala
         self.alis_label.setText(f"{current_alis:,.2f}")
         self.satis_label.setText(f"{current_satis:,.2f}")
         self.alis_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.satis_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
+        # 5. GÜNLÜK DEĞİŞİM FORMATI
         degisim = data.get('degisim', 0.0)
         if degisim > 0:
             self.degisim_label.setText(f"Günlük Değişim: +%{degisim:.2f} ▲")
@@ -303,9 +321,11 @@ class MainWindow(QMainWindow):
             self.degisim_label.setStyleSheet("font-size: 11px; font-weight: bold; color: #6e6e73; padding-top: 2px;")
         self.degisim_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
+        # Son değerleri güncelle
         self.last_alis = current_alis
         self.last_satis = current_satis
         
+        # 6. ZAMAN DAMGASI (TIMESTAMP) GÜNCELLEMESİ
         from datetime import datetime
         self.status_label.setText(f"Son Güncelleme: {datetime.now().strftime('%H:%M:%S')}")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
